@@ -1,0 +1,53 @@
+# 服务器端口配置
+server:
+  port: 8081
+
+# 应用名称和数据库配置
+spring:
+  application:
+    name: deepseek-api
+  # datasource:
+  #   url: jdbc:mysql://localhost:3306/deepseekapi?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+  #   username: root
+  #   password: 129131
+  #   driver-class-name: com.mysql.cj.jdbc.Driver
+  #   type: com.alibaba.druid.pool.DruidDataSource
+  #   druid:
+  #     initial-size: 5
+  #     min-idle: 5
+  #     max-active: 20
+  #     max-wait: 60000
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com:
+      example:
+        deepseekapi: DEBUG
+    com.alibaba.nacos.client: WARN
+
+# Knife4j配置
+knife4j:
+  enable: true
+  setting:
+    language: zh-CN
+    enableSwaggerModels: true
+    enableDocumentManage: true
+    swaggerModelName: 实体类列表
+    enableVersion: false
+    enableReloadCacheParameter: false
+    enableAfterScript: true
+    enableFilterMultipartApiMethodType: POST
+    enableFilterMultipartApis: false
+    enableRequestCache: true
+    enableHost: false
+    enableHostText: 
+    enableDynamicParameter: false
+    enableDebug: true
+    enableOpenApi: false
+    enableGroup: false
+  basic:
+    enable: false
+    username: admin
+    password: 123456

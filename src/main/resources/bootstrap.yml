@@ -1,0 +1,27 @@
+# bootstrap配置，优先于application.yml加载
+spring:
+  application:
+    name: deepseek-api
+  cloud:
+    nacos:
+      # 服务发现配置
+      discovery:
+        server-addr: 127.0.0.1:8848
+        # 如果Nacos没有开启认证，注释或删除以下两行
+        # username: nacos
+        # password: nacos
+      # 配置中心配置
+      config:
+        server-addr: 127.0.0.1:8848
+        file-extension: yaml
+        # 如果Nacos没有开启认证，注释或删除以下两行
+        # username: nacos
+        # password: nacos
+        # 命名空间，默认为public
+        namespace: public
+        # 配置组，默认为DEFAULT_GROUP
+        group: DEFAULT_GROUP
+        # 共享配置
+        shared-configs:
+          - data-id: common-config.yaml
+            refresh: true
