@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件分析</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-ui@2.15.13/lib/theme-chalk/index.css">
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f7fa;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #409EFF;
+            color: white;
+            padding: 20px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .analysis-card {
+            margin-bottom: 20px;
+        }
+        .file-list {
+            margin-top: 20px;
+        }
+        .analysis-result {
+            white-space: pre-wrap;
+            background-color: #f8f8f8;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+        }
+        .logout-btn {
+            margin-left: 10px;
+        }
+        .nav-links {
+            margin-bottom: 20px;
+        }
+        .model-select {
+            width: 100%;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <div class="header">
+                <h1>文件分析系统</h1>
+                <div>
+                    <span>欢迎，{{ username }}</span>
+                    <el-button type="danger" size="small" class="logout-btn" @click="logout">退出登录</el-button>
+                </div>
+            </div>
+            
+            <div class="nav-links">
+                <el-button type="primary" @click="goToFileManagement">返回文件管理</el-button>
+            </div>
+            
+            <el-card class="file-list">
+                <div slot="header">
+                    <span>文件列表</span>
+                    <el-button style="float: right; padding: 3px 0" type="text" @click="refreshFileList">刷新</el-button>
+                </div>
+                <el-table
+                    v-loading="loading"
+                    :data="fileList"
+                    style="width: 100%">
+                    <el-table-column
+                        prop="originalName"
+                        label="文件名"
+                        min-width="250">
+                        <template slot-scope="scope">
+                            <div class="file-name">{{ scope.row.originalName }}</div>
+                        </template>
+                    </el-table-column>
+                    <el-table-column
+                        prop="fileSize"
+                        label="大小"
+                        width="120">
+                        <template slot-scope="scope">
+                            {{ formatFileSize(scope.row.fileSize) }}
+                        </template>
+                    </el-table-column>
+                    <el-table-column
+                        prop="createTime"
+                        label="上传时间"
+                        width="180">
+                        <template slot-scope="scope">
+                            {{ formatDate(scope.row.createTime) }}
+                        </template>
+                    </el-table-column>
+                    <el-table-column
+                        label="操作"
+                        width="120">
+                        <template slot-scope="scope">
+                            <el-button
+                                size="mini"
+                                type="primary"
+                                @click="analyzeFile(scope.row)">分析</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+                
+                <!-- 分页 -->
+                <div style="margin-top: 20px; text-align: right;">
+                    <el-pagination
+                        @size-change="handleSizeChange"
+                        @current-change="handleCurrentChange"
+                        :current-page="currentPage"
+                        :page-sizes="[10, 20, 50, 100]"
+                        :page-size="pageSize"
+                        layout="total, sizes, prev, pager, next, jumper"
+                        :total="total">
+                    </el-pagination>
+                </div>
+            </el-card>
+            
+            <!-- 分析历史记录 -->
+            <el-card v-if="selectedFile" class="analysis-card">
+                <div slot="header">
+                    <span>{{ selectedFile.originalName }} 的分析历史</span>
+                </div>
+                <el-table
+                    v-loading="analysisHistoryLoading"
+                    :data="analysisHistory"
+                    style="width: 100%">
+                    <el-table-column
+                        prop="requirement"
+                        label="分析要求"
+                        min-width="200">
+                    </el-table-column>
+                    <el-table-column
+                        prop="model"
+                        label="使用模型"
+                        width="150">
+                    </el-table-column>
+                    <el-table-column
+                        prop="totalTokens"
+                        label="Token数"
+                        width="100">
+                    </el-table-column>
+                    <el-table-column
+                        prop="createTime"
+                        label="分析时间"
+                        width="180">
+                        <template slot-scope="scope">
+                            {{ formatDate(scope.row.createTime) }}
+                        </template>
+                    </el-table-column>
+                    <el-table-column
+                        label="操作"
+                        width="180">
+                        <template slot-scope="scope">
+                            <el-button
+                                size="mini"
+                                type="primary"
+                                @click="viewAnalysisResult(scope.row)">查看结果</el-button>
+                            <el-button
+                                size="mini"
+                                type="danger"
+                                @click="deleteAnalysis(scope.row)">删除</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </el-card>
+            
+            <!-- 文件分析表单 -->
+            <el-dialog title="文件分析" :visible.sync="analysisDialogVisible" width="50%">
+                <el-form :model="analysisForm" label-width="100px">
+                    <el-form-item label="文件名">
+                        <span>{{ selectedFile ? selectedFile.originalName : '' }}</span>
+                    </el-form-item>
+                    <el-form-item label="分析要求">
+                        <el-input
+                            type="textarea"
+                            :rows="4"
+                            placeholder="请输入您的分析要求，例如：总结文档内容、提取关键信息等"
+                            v-model="analysisForm.requirement">
+                        </el-input>
+                    </el-form-item>
+                    <el-form-item label="选择模型">
+                        <el-select v-model="analysisForm.model" placeholder="请选择模型" class="model-select">
+                            <el-option label="DeepSeek-Coder-7B" value="deepseek-coder-7b"></el-option>
+                            <el-option label="DeepSeek-LLM-7B" value="deepseek-llm-7b"></el-option>
+                            <el-option label="DeepSeek-V2" value="deepseek-v2"></el-option>
+                        </el-select>
+                    </el-form-item>
+                </el-form>
+                <div slot="footer" class="dialog-footer">
+                    <el-button @click="analysisDialogVisible = false">取消</el-button>
+                    <el-button type="primary" @click="submitAnalysis" :loading="analysisLoading">开始分析</el-button>
+                </div>
+            </el-dialog>
+            
+            <!-- 分析结果对话框 -->
+            <el-dialog title="分析结果" :visible.sync="resultDialogVisible" width="70%">
+                <div v-if="currentAnalysis">
+                    <h3>分析要求</h3>
+                    <p>{{ currentAnalysis.requirement }}</p>
+                    <h3>分析结果</h3>
+                    <div class="analysis-result">{{ currentAnalysis.analysis }}</div>
+                    <div style="margin-top: 15px;">
+                        <p>使用模型: {{ currentAnalysis.model }}</p>
+                        <p>Token数量: {{ currentAnalysis.totalTokens }}</p>
+                        <p>分析时间: {{ formatDate(currentAnalysis.createTime) }}</p>
+                    </div>
+                </div>
+            </el-dialog>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/element-ui@2.15.13/lib/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="/js/auth.js"></script>
+    <script>
+        // 文件分析Vue应用
+        const app = new Vue({
+            el: '#app',
+            data() {
+                return {
+                    username: '',
+                    fileList: [],
+                    loading: false,
+                    // 分页相关
+                    currentPage: 1,
+                    pageSize: 10,
+                    total: 0,
+                    // 分析相关
+                    selectedFile: null,
+                    analysisDialogVisible: false,
+                    resultDialogVisible: false,
+                    analysisForm: {
+                        fileId: null,
+                        requirement: '',
+                        model: 'deepseek-v2'
+                    },
+                    analysisLoading: false,
+                    // 分析历史
+                    analysisHistory: [],
+                    analysisHistoryLoading: false,
+                    currentAnalysis: null
+                };
+            },
+            created() {
+                // 检查登录状态
+                if (!auth.checkAuth()) {
+                    return;
+                }
+                
+                this.username = auth.getUsername();
+                
+                // 获取URL参数中的文件ID
+                const urlParams = new URLSearchParams(window.location.search);
+                const fileId = urlParams.get('fileId');
+                
+                if (fileId) {
+                    // 如果URL中有文件ID，直接加载该文件的信息和分析历史
+                    this.loadFileAndAnalysisHistory(fileId);
+                } else {
+                    // 否则获取文件列表
+                    this.getFileList();
+                }
+            },
+            methods: {
+                // 加载指定文件的信息和分析历史
+                loadFileAndAnalysisHistory(fileId) {
+                    const token = auth.getToken();
+                    
+                    // 获取文件信息
+                    axios.get(`/api/file/${fileId}`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    })
+                    .then(response => {
+                        this.selectedFile = response.data;
+                        // 获取该文件的分析历史
+                        this.getAnalysisHistory(fileId);
+                    })
+                    .catch(error => {
+                        console.error('获取文件信息失败:', error);
+                        this.$message.error('获取文件信息失败');
+                        
+                        if (error.response && error.response.status === 401) {
+                            auth.logout();
+                            window.location.href = '/login.html';
+                        } else {
+                            // 如果获取文件信息失败，则加载文件列表
+                            this.getFileList();
+                        }
+                    });
+                },
+                
+                // 获取文件列表
+                getFileList() {
+                    this.loading = true;
+                    const token = auth.getToken();
+                    
+                    axios.get(`/api/file/list?current=${this.currentPage}&pageSize=${this.pageSize}`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    })
+                    .then(response => {
+                        this.fileList = response.data.records;
+                        this.total = response.data.total;
+                        this.loading = false;
+                    })
+                    .catch(error => {
+                        console.error('获取文件列表失败:', error);
+                        this.$message.error('获取文件列表失败');
+                        this.loading = false;
+                        
+                        if (error.response && error.response.status === 401) {
+                            auth.logout();
+                            window.location.href = '/login.html';
+                        }
+                    });
+                },
+                
+                // 刷新文件列表
+                refreshFileList() {
+                    this.getFileList();
+                },
+                
+                // 处理页码变化
+                handleCurrentChange(val) {
+                    this.currentPage = val;
+                    this.getFileList();
+                },
+                
+                // 处理每页条数变化
+                handleSizeChange(val) {
+                    this.pageSize = val;
+                    this.currentPage = 1;
+                    this.getFileList();
+                },
+                
+                // 分析文件
+                analyzeFile(file) {
+                    this.selectedFile = file;
+                    this.analysisForm.fileId = file.id;
+                    this.analysisDialogVisible = true;
+                    
+                    // 获取该文件的分析历史
+                    this.getAnalysisHistory(file.id);
+                },
+                
+                // 获取分析历史
+                getAnalysisHistory(fileId) {
+                    this.analysisHistoryLoading = true;
+                    const token = auth.getToken();
+                    
+                    axios.get(`/api/file-analysis/history/${fileId}`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    })
+                    .then(response => {
+                        this.analysisHistory = response.data;
+                        this.analysisHistoryLoading = false;
+                    })
+                    .catch(error => {
+                        console.error('获取分析历史失败:', error);
+                        this.$message.error('获取分析历史失败');
+                        this.analysisHistoryLoading = false;
+                    });
+                },
+                
+                // 提交分析请求
+                submitAnalysis() {
+                    if (!this.analysisForm.requirement) {
+                        this.$message.warning('请输入分析要求');
+                        return;
+                    }
+                    
+                    this.analysisLoading = true;
+                    const token = auth.getToken();
+                    
+                    axios.post('/api/file-analysis/analyze', this.analysisForm, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    })
+                    .then(response => {
+                        this.analysisLoading = false;
+                        this.analysisDialogVisible = false;
+                        this.$message.success('文件分析成功');
+                        
+                        // 更新分析历史
+                        this.getAnalysisHistory(this.selectedFile.id);
+                        
+                        // 显示分析结果
+                        this.currentAnalysis = response.data;
+                        this.resultDialogVisible = true;
+                    })
+                    .catch(error => {
+                        this.analysisLoading = false;
+                        console.error('文件分析失败:', error);
+                        this.$message.error('文件分析失败: ' + (error.response?.data?.message || error.message || '未知错误'));
+                    });
+                },
+                
+                // 查看分析结果
+                viewAnalysisResult(analysis) {
+                    this.currentAnalysis = analysis;
+                    this.resultDialogVisible = true;
+                },
+                
+                // 删除分析记录
+                deleteAnalysis(analysis) {
+                    this.$confirm('确定要删除这条分析记录吗?', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(() => {
+                        const token = auth.getToken();
+                        
+                        axios.delete(`/api/file-analysis/${analysis.id}`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        })
+                        .then(() => {
+                            this.$message.success('删除成功');
+                            // 更新分析历史
+                            this.getAnalysisHistory(this.selectedFile.id);
+                        })
+                        .catch(error => {
+                            console.error('删除失败:', error);
+                            this.$message.error('删除失败: ' + (error.response?.data?.message || error.message || '未知错误'));
+                        });
+                    }).catch(() => {
+                        // 取消删除
+                    });
+                },
+                
+                // 格式化文件大小
+                formatFileSize(size) {
+                    if (size < 1024) {
+                        return size + ' B';
+                    } else if (size < 1024 * 1024) {
+                        return (size / 1024).toFixed(2) + ' KB';
+                    } else if (size < 1024 * 1024 * 1024) {
+                        return (size / (1024 * 1024)).toFixed(2) + ' MB';
+                    } else {
+                        return (size / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+                    }
+                },
+                
+                // 格式化日期
+                formatDate(timestamp) {
+                    if (!timestamp) return '';
+                    
+                    const date = new Date(timestamp);
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const hours = String(date.getHours()).padStart(2, '0');
+                    const minutes = String(date.getMinutes()).padStart(2, '0');
+                    const seconds = String(date.getSeconds()).padStart(2, '0');
+                    
+                    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+                },
+                
+                // 返回文件管理页面
+                goToFileManagement() {
+                    window.location.href = '/file.html';
+                },
+                
+                // 退出登录
+                logout() {
+                    auth.logout();
+                    window.location.href = '/login.html';
+                }
+            }
+        });
+    </script>
+</body>
+</html>

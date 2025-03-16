@@ -105,11 +105,11 @@
                     <el-col :span="8">
                         <el-card>
                             <div slot="header">
-                                <span>文档摘要</span>
+                                <span>文件管理</span>
                             </div>
                             <div>
-                                <p>生成文档内容摘要</p>
-                                <el-button type="primary" @click="goToSummary">生成摘要</el-button>
+                                <p>上传和管理您的文件</p>
+                                <el-button type="primary" @click="goToFileManage">文件管理</el-button>
                             </div>
                         </el-card>
                     </el-col>
@@ -129,7 +129,7 @@
             
             <!-- 页脚 -->
             <div class="footer">
-                <p>© 2025 文档处理系统 - 基于DeepSeek API</p>
+                <p> 2025 文档处理系统 - 基于DeepSeek API</p>
             </div>
         </div>
     </div>
@@ -182,16 +182,21 @@
                     // window.location.href = '/upload.html';
                 },
                 
-                // 导航到摘要页面
-                goToSummary() {
-                    this.$message('文档摘要功能开发中...');
-                    // window.location.href = '/summary.html';
+                // 导航到文件管理页面
+                goToFileManage() {
+                    window.location.href = '/file.html';
                 },
                 
                 // 导航到管理页面
                 goToManage() {
                     this.$message('文档管理功能开发中...');
                     // window.location.href = '/manage.html';
+                },
+                
+                // 导航到摘要页面
+                goToSummary() {
+                    this.$message('文档摘要功能开发中...');
+                    // window.location.href = '/summary.html';
                 }
             }
         });

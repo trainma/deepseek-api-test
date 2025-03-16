@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件管理</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-ui@2.15.13/lib/theme-chalk/index.css">
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f7fa;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #409EFF;
+            color: white;
+            padding: 20px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .file-list {
+            margin-top: 20px;
+        }
+        .file-card {
+            margin-bottom: 10px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .upload-demo {
+            margin-bottom: 20px;
+        }
+        .file-actions {
+            margin-left: 10px;
+        }
+        .file-name {
+            word-break: break-all;
+        }
+        .logout-btn {
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <div class="header">
+                <h1>文件管理系统</h1>
+                <div>
+                    <span>欢迎，{{ username }}</span>
+                    <el-button type="danger" size="small" class="logout-btn" @click="logout">退出登录</el-button>
+                </div>
+            </div>
+            
+            <div class="nav-links" style="margin-bottom: 20px;">
+                <el-button type="primary" @click="goToFileAnalysis">文件分析</el-button>
+            </div>
+            
+            <el-card class="upload-demo">
+                <div slot="header">
+                    <span>文件上传</span>
+                </div>
+                <el-upload
+                    class="upload-demo"
+                    drag
+                    action="/api/file/upload"
+                    :headers="uploadHeaders"
+                    :on-success="handleUploadSuccess"
+                    :on-error="handleUploadError"
+                    :before-upload="beforeUpload"
+                    multiple>
+                    <i class="el-icon-upload"></i>
+                    <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+                    <div class="el-upload__tip" slot="tip">支持任意类型文件，大小不超过10MB</div>
+                </el-upload>
+            </el-card>
+            
+            <el-card class="file-list">
+                <div slot="header">
+                    <span>文件列表</span>
+                    <el-button style="float: right; padding: 3px 0" type="text" @click="refreshFileList">刷新</el-button>
+                </div>
+                <el-table
+                    v-loading="loading"
+                    :data="fileList"
+                    style="width: 100%">
+                    <el-table-column
+                        prop="originalName"
+                        label="文件名"
+                        min-width="250">
+                        <template slot-scope="scope">
+                            <div class="file-name">{{ scope.row.originalName }}</div>
+                        </template>
+                    </el-table-column>
+                    <el-table-column
+                        prop="fileSize"
+                        label="大小"
+                        width="120">
+                        <template slot-scope="scope">
+                            {{ formatFileSize(scope.row.fileSize) }}
+                        </template>
+                    </el-table-column>
+                    <el-table-column
+                        prop="createTime"
+                        label="上传时间"
+                        width="180">
+                        <template slot-scope="scope">
+                            {{ formatDate(scope.row.createTime) }}
+                        </template>
+                    </el-table-column>
+                    <el-table-column
+                        label="操作"
+                        width="280">
+                        <template slot-scope="scope">
+                            <el-button
+                                size="mini"
+                                type="primary"
+                                @click="previewFile(scope.row)">预览</el-button>
+                            <el-button
+                                size="mini"
+                                type="success"
+                                @click="downloadFile(scope.row)">下载</el-button>
+                            <el-button
+                                size="mini"
+                                type="warning"
+                                @click="analyzeFile(scope.row)">分析</el-button>
+                            <el-button
+                                size="mini"
+                                type="danger"
+                                @click="deleteFile(scope.row)">删除</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+                
+                <!-- 分页 -->
+                <div style="margin-top: 20px; text-align: right;">
+                    <el-pagination
+                        @size-change="handleSizeChange"
+                        @current-change="handleCurrentChange"
+                        :current-page="currentPage"
+                        :page-sizes="[10, 20, 50, 100]"
+                        :page-size="pageSize"
+                        layout="total, sizes, prev, pager, next, jumper"
+                        :total="total">
+                    </el-pagination>
+                </div>
+            </el-card>
+            
+            <!-- 预览对话框 -->
+            <el-dialog title="文件预览" :visible.sync="previewVisible" width="80%">
+                <div v-if="isImage(currentFile)" style="text-align: center;">
+                    <img :src="currentFile.fileUrl" style="max-width: 100%;" />
+                </div>
+                <div v-else-if="isPdf(currentFile)" style="height: 600px;">
+                    <iframe :src="currentFile.fileUrl" style="width: 100%; height: 100%;"></iframe>
+                </div>
+                <div v-else>
+                    <p>该文件类型无法预览，请下载后查看。</p>
+                    <el-button type="primary" @click="downloadFile(currentFile)">下载文件</el-button>
+                </div>
+            </el-dialog>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/element-ui@2.15.13/lib/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="/js/auth.js"></script>
+    <script>
+        // 文件管理Vue应用
+        const app = new Vue({
+            el: '#app',
+            data() {
+                return {
+                    username: '',
+                    fileList: [],
+                    loading: false,
+                    previewVisible: false,
+                    currentFile: null,
+                    uploadHeaders: {
+                        'Authorization': ''
+                    },
+                    // 分页相关
+                    currentPage: 1,
+                    pageSize: 10,
+                    total: 0
+                };
+            },
+            created() {
+                // 检查登录状态
+                if (!auth.checkAuth()) {
+                    return;
+                }
+                
+                this.username = auth.getUsername();
+                this.uploadHeaders.Authorization = 'Bearer ' + auth.getToken();
+                
+                // 获取文件列表
+                this.getFileList();
+            },
+            methods: {
+                // 获取文件列表
+                getFileList() {
+                    this.loading = true;
+                    axios.get(`/api/file/page?current=${this.currentPage}&size=${this.pageSize}`)
+                        .then(response => {
+                            this.loading = false;
+                            const resp = response.data;
+                            if (resp.success) {
+                                const page = resp.data;
+                                this.fileList = page.records || [];
+                                this.total = page.total || 0;
+                            } else {
+                                this.$message.error(resp.message || '获取文件列表失败');
+                            }
+                        })
+                        .catch(error => {
+                            this.loading = false;
+                            this.$message.error('获取文件列表失败');
+                            console.error(error);
+                        });
+                },
+                
+                // 刷新文件列表
+                refreshFileList() {
+                    this.getFileList();
+                },
+                
+                // 处理页码变化
+                handleCurrentChange(val) {
+                    this.currentPage = val;
+                    this.getFileList();
+                },
+                
+                // 处理每页条数变化
+                handleSizeChange(val) {
+                    this.pageSize = val;
+                    this.currentPage = 1;
+                    this.getFileList();
+                },
+                
+                // 上传成功处理
+                handleUploadSuccess(response, file, fileList) {
+                    if (response.success) {
+                        this.$message.success(response.message || '上传成功');
+                        this.getFileList(); // 刷新文件列表
+                    } else {
+                        this.$message.error(response.message || '上传失败');
+                    }
+                },
+                
+                // 上传失败处理
+                handleUploadError(err, file, fileList) {
+                    let errorMsg = '上传失败';
+                    if (err.response && err.response.data) {
+                        errorMsg = err.response.data.message || errorMsg;
+                    }
+                    this.$message.error(errorMsg);
+                },
+                
+                // 上传前检查
+                beforeUpload(file) {
+                    const isLt10M = file.size / 1024 / 1024 < 10;
+                    if (!isLt10M) {
+                        this.$message.error('文件大小不能超过10MB!');
+                        return false;
+                    }
+                    return true;
+                },
+                
+                // 预览文件
+                previewFile(file) {
+                    this.currentFile = file;
+                    this.previewVisible = true;
+                },
+                
+                // 下载文件
+                downloadFile(file) {
+                    window.open(`/api/file/download/${file.id}`, '_blank');
+                },
+                
+                // 删除文件
+                deleteFile(file) {
+                    this.$confirm('确定要删除该文件吗?', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(() => {
+                        axios.delete(`/api/file/delete/${file.id}`)
+                            .then(response => {
+                                const resp = response.data;
+                                if (resp.success) {
+                                    this.$message.success(resp.message || '删除成功');
+                                    this.getFileList(); // 刷新文件列表
+                                } else {
+                                    this.$message.error(resp.message || '删除失败');
+                                }
+                            })
+                            .catch(error => {
+                                this.$message.error('删除失败');
+                                console.error(error);
+                            });
+                    }).catch(() => {
+                        // 取消删除
+                    });
+                },
+                
+                // 格式化文件大小
+                formatFileSize(size) {
+                    if (size < 1024) {
+                        return size + ' B';
+                    } else if (size < 1024 * 1024) {
+                        return (size / 1024).toFixed(2) + ' KB';
+                    } else if (size < 1024 * 1024 * 1024) {
+                        return (size / 1024 / 1024).toFixed(2) + ' MB';
+                    } else {
+                        return (size / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+                    }
+                },
+                
+                // 格式化日期
+                formatDate(timestamp) {
+                    if (!timestamp) return '';
+                    const date = new Date(timestamp);
+                    return date.toLocaleString('zh-CN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                },
+                
+                // 判断是否为图片
+                isImage(file) {
+                    if (!file || !file.originalName) return false;
+                    const ext = file.originalName.split('.').pop().toLowerCase();
+                    return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(ext);
+                },
+                
+                // 判断是否为PDF
+                isPdf(file) {
+                    if (!file || !file.originalName) return false;
+                    const ext = file.originalName.split('.').pop().toLowerCase();
+                    return ext === 'pdf';
+                },
+                
+                // 退出登录
+                logout() {
+                    auth.logout();
+                },
+                
+                // 跳转到文件分析页面
+                goToFileAnalysis() {
+                    window.location.href = '/file-analysis.html';
+                },
+                
+                // 分析文件
+                analyzeFile(file) {
+                    window.location.href = `/file-analysis.html?fileId=${file.id}`;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
