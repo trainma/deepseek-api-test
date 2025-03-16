@@ -51,8 +51,8 @@ DeepSeek API 测试项目是一个基于Spring Boot的Web应用，用于处理�
 系统通过以下方式实现高并发处理：
 
 1. **异步消息队列**：使用RabbitMQ实现请求的异步处理
-2. **生产者异步发送**：使用`@Async`注解实现消息异步发送
-3. **消费者并发处理**：配置`concurrency = "3-10"`实现多线程消费
+2. **生产者异步发送**：使用 `@Async`注解实现消息异步发送
+3. **消费者并发处理**：配置 `concurrency = "3-10"`实现多线程消费
 4. **线程池配置**：自定义线程池参数，优化异步任务执行
 
 ## 消息可靠性保障
@@ -76,12 +76,14 @@ DeepSeek API 测试项目是一个基于Spring Boot的Web应用，用于处理�
 ### 安装步骤
 
 1. 克隆项目
+
 ```bash
 git clone https://github.com/yourusername/deepseek-api-test.git
 cd deepseek-api-test
 ```
 
 2. 配置数据库
+
 ```
 # 修改 application.properties 文件中的数据库配置
 spring.datasource.url=jdbc:mysql://localhost:3306/deepseek_db
@@ -90,6 +92,7 @@ spring.datasource.password=your_password
 ```
 
 3. 配置RabbitMQ
+
 ```
 # 修改 application.properties 文件中的RabbitMQ配置
 spring.rabbitmq.host=localhost
@@ -99,11 +102,13 @@ spring.rabbitmq.password=guest
 ```
 
 4. 编译项目
+
 ```bash
 mvn clean package
 ```
 
 5. 运行项目
+
 ```bash
 java -jar target/deepseek-api-test-0.0.1-SNAPSHOT.jar
 ```
@@ -111,6 +116,7 @@ java -jar target/deepseek-api-test-0.0.1-SNAPSHOT.jar
 ### API文档
 
 启动项目后，访问以下URL查看API文档：
+
 ```
 http://localhost:8080/swagger-ui.html
 ```
@@ -119,13 +125,13 @@ http://localhost:8080/swagger-ui.html
 
 ### 添加新的消息队列
 
-1. 在`RabbitMQConfig`类中定义新的队列、交换机和路由键
+1. 在 `RabbitMQConfig`类中定义新的队列、交换机和路由键
 2. 创建新的生产者类，实现消息发送逻辑
 3. 创建新的消费者类，实现消息处理逻辑
 
 ### 异步任务配置
 
-系统使用`@Async`注解实现异步任务处理，相关配置在`AsyncConfig`类中：
+系统使用 `@Async`注解实现异步任务处理，相关配置在 `AsyncConfig`类中：
 
 ```java
 @Configuration
@@ -141,7 +147,7 @@ public class AsyncConfig implements AsyncConfigurer {
         executor.initialize();
         return executor;
     }
-    
+  
     @Override
     public Executor getAsyncExecutor() {
         return taskExecutor();
@@ -149,18 +155,6 @@ public class AsyncConfig implements AsyncConfigurer {
 }
 ```
 
-## 贡献指南
-
-1. Fork 项目
-2. 创建特性分支 (`git checkout -b feature/amazing-feature`)
-3. 提交更改 (`git commit -m 'Add some amazing feature'`)
-4. 推送到分支 (`git push origin feature/amazing-feature`)
-5. 创建Pull Request
-
 ## 许可证
 
 本项目采用 MIT 许可证 - 详情请参阅 [LICENSE](LICENSE) 文件
-
-## 联系方式
-
-如有任何问题，请联系项目维护者：your-email@example.com
