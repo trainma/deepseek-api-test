@@ -1,5 +1,6 @@
 package com.example.deepseekapi.controller;
 
+import com.example.deepseekapi.common.R;
 import com.example.deepseekapi.model.dto.LoginDTO;
 import com.example.deepseekapi.model.dto.RegisterDTO;
 import com.example.deepseekapi.model.vo.LoginVO;
@@ -8,7 +9,6 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,25 +30,25 @@ public class AuthController {
 
     @PostMapping("/register")
     @ApiOperation(value = "用户注册", notes = "注册新用户")
-    public ResponseEntity<?> register(@Valid @RequestBody RegisterDTO registerDTO) {
+    public R<?> register(@Valid @RequestBody RegisterDTO registerDTO) {
         try {
             userService.register(registerDTO);
-            return ResponseEntity.ok("用户注册成功");
+            return R.ok("用户注册成功");
         } catch (Exception e) {
             log.error("用户注册失败", e);
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return R.fail(e.getMessage());
         }
     }
 
     @PostMapping("/login")
     @ApiOperation(value = "用户登录", notes = "登录并获取JWT令牌")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginDTO loginDTO) {
+    public R<LoginVO> login(@Valid @RequestBody LoginDTO loginDTO) {
         try {
             LoginVO loginVO = userService.login(loginDTO);
-            return ResponseEntity.ok(loginVO);
+            return R.ok(loginVO, "登录成功");
         } catch (Exception e) {
             log.error("用户登录失败", e);
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return R.fail(e.getMessage());
         }
     }
 }

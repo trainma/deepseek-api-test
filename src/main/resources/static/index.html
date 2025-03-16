@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文档处理系统</title>
+    <!-- 引入Element UI样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f5f7fa;
+            font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
+        }
+        .app-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background-color: #409EFF;
+            color: white;
+            padding: 0 20px;
+            height: 60px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header-title {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+        }
+        .username {
+            margin-right: 15px;
+        }
+        .main-content {
+            flex: 1;
+            padding: 20px;
+        }
+        .welcome-card {
+            margin-bottom: 20px;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #909399;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="app-container">
+            <!-- 头部导航 -->
+            <div class="header">
+                <div class="header-title">文档处理系统</div>
+                <div class="user-info">
+                    <span class="username">欢迎，{{ username }}</span>
+                    <el-dropdown @command="handleCommand">
+                        <span class="el-dropdown-link">
+                            <i class="el-icon-user"></i>
+                        </span>
+                        <el-dropdown-menu slot="dropdown">
+                            <el-dropdown-item command="profile">个人信息</el-dropdown-item>
+                            <el-dropdown-item command="logout">退出登录</el-dropdown-item>
+                        </el-dropdown-menu>
+                    </el-dropdown>
+                </div>
+            </div>
+            
+            <!-- 主要内容 -->
+            <div class="main-content">
+                <el-card class="welcome-card">
+                    <div slot="header">
+                        <span>欢迎使用文档处理系统</span>
+                    </div>
+                    <div>
+                        <p>您已成功登录系统。这是一个基于DeepSeek API的文档处理系统，可以帮助您：</p>
+                        <ul>
+                            <li>上传和解析各种格式的文档</li>
+                            <li>使用AI技术自动生成文档摘要</li>
+                            <li>高效管理和检索文档内容</li>
+                        </ul>
+                        <p>请使用左侧菜单导航到不同的功能模块。</p>
+                    </div>
+                </el-card>
+                
+                <el-row :gutter="20">
+                    <el-col :span="8">
+                        <el-card>
+                            <div slot="header">
+                                <span>文档上传</span>
+                            </div>
+                            <div>
+                                <p>上传文档并进行解析</p>
+                                <el-button type="primary" @click="goToUpload">开始上传</el-button>
+                            </div>
+                        </el-card>
+                    </el-col>
+                    <el-col :span="8">
+                        <el-card>
+                            <div slot="header">
+                                <span>文档摘要</span>
+                            </div>
+                            <div>
+                                <p>生成文档内容摘要</p>
+                                <el-button type="primary" @click="goToSummary">生成摘要</el-button>
+                            </div>
+                        </el-card>
+                    </el-col>
+                    <el-col :span="8">
+                        <el-card>
+                            <div slot="header">
+                                <span>文档管理</span>
+                            </div>
+                            <div>
+                                <p>管理已上传的文档</p>
+                                <el-button type="primary" @click="goToManage">管理文档</el-button>
+                            </div>
+                        </el-card>
+                    </el-col>
+                </el-row>
+            </div>
+            
+            <!-- 页脚 -->
+            <div class="footer">
+                <p>© 2025 文档处理系统 - 基于DeepSeek API</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 引入Vue.js -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <!-- 引入Element UI组件库 -->
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <!-- 引入axios -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- 引入认证JS -->
+    <script src="js/auth.js"></script>
+    <!-- 引入首页JS -->
+    <script>
+        new Vue({
+            el: '#app',
+            data() {
+                return {
+                    username: ''
+                };
+            },
+            created() {
+                // 检查登录状态
+                if (!auth.checkAuth()) {
+                    return;
+                }
+                
+                // 获取用户信息
+                this.username = auth.getUsername();
+            },
+            methods: {
+                // 处理下拉菜单命令
+                handleCommand(command) {
+                    if (command === 'logout') {
+                        this.$confirm('确认退出登录吗?', '提示', {
+                            confirmButtonText: '确定',
+                            cancelButtonText: '取消',
+                            type: 'warning'
+                        }).then(() => {
+                            auth.logout();
+                        }).catch(() => {});
+                    } else if (command === 'profile') {
+                        this.$message('个人信息功能开发中...');
+                    }
+                },
+                
+                // 导航到上传页面
+                goToUpload() {
+                    this.$message('文档上传功能开发中...');
+                    // window.location.href = '/upload.html';
+                },
+                
+                // 导航到摘要页面
+                goToSummary() {
+                    this.$message('文档摘要功能开发中...');
+                    // window.location.href = '/summary.html';
+                },
+                
+                // 导航到管理页面
+                goToManage() {
+                    this.$message('文档管理功能开发中...');
+                    // window.location.href = '/manage.html';
+                }
+            }
+        });
+    </script>
+</body>
+</html>
