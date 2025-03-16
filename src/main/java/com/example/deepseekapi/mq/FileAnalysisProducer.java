@@ -6,6 +6,7 @@ import com.example.deepseekapi.model.dto.FileAnalysisTaskDTO;
 import com.example.deepseekapi.model.vo.FileAnalysisTaskVO;
 import com.example.deepseekapi.service.FileAnalysisTaskService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.core.MessageDeliveryMode;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.BeanUtils;
@@ -79,20 +80,45 @@ public class FileAnalysisProducer {
                     log.error("消息发送失败，任务ID: {}, 关联ID: {}, 原因: {}", 
                               task.getId(), correlationData.getId(), confirm.getReason());
                     // 可以在这里添加重试逻辑
+                    retryMessage(task, correlationData);
                 }
             },
-            ex -> log.error("消息发送异常，任务ID: {}, 关联ID: {}, 异常: {}", 
-                          task.getId(), correlationData.getId(), ex.getMessage())
+            ex -> {
+                log.error("消息发送异常，任务ID: {}, 关联ID: {}, 异常: {}", 
+                          task.getId(), correlationData.getId(), ex.getMessage());
+                // 发生异常时重试
+                retryMessage(task, correlationData);
+            }
         );
         
-        // 发送消息到队列
+        // 发送消息到队列，设置消息持久化
         rabbitTemplate.convertAndSend(
             RabbitMQConfig.FILE_ANALYSIS_EXCHANGE,
             RabbitMQConfig.FILE_ANALYSIS_ROUTING_KEY,
             task,
+            message -> {
+                // 设置消息持久化
+                message.getMessageProperties().setDeliveryMode(MessageDeliveryMode.PERSISTENT);
+                return message;
+            },
             correlationData
         );
         
         log.info("发送文件分析任务到队列: {}, 关联ID: {}", task.getId(), correlationData.getId());
+    }
+    
+    /**
+     * 消息发送失败时的重试逻辑
+     * 
+     * @param task 任务
+     * @param correlationData 关联数据
+     */
+    private void retryMessage(FileAnalysisTask task, CorrelationData correlationData) {
+        // 这里可以实现重试逻辑，例如最多重试3次
+        // 为了简单起见，这里只是记录日志，实际应用中可以添加更复杂的重试机制
+        log.info("准备重试发送消息，任务ID: {}, 关联ID: {}", task.getId(), correlationData.getId());
+        
+        // 实际项目中可以添加重试次数限制和延迟重试
+        // 例如使用Spring的RetryTemplate或自定义重试逻辑
     }
 }
