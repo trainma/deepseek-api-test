@@ -51,3 +51,10 @@ knife4j:
     enable: false
     username: admin
     password: 123456
+
+# DeepSeek API配置
+deepseek:
+  api:
+    key: sk-e140f553aeed4949ab73786b9eea0bc7
+    url: https://api.deepseek.com
+    model: deepseek-chat
