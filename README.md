@@ -7,7 +7,7 @@ DeepSeek API 测试项目是一个基于Spring Boot的Web应用，用于处理�
 ## 技术栈
 
 - **后端框架**：Spring Boot
-- **消息队列**：RabbitMQ
+- **中间件**：RabbitMQ、Nacos、Minio
 - **数据库**：MySQL
 - **API文档**：Swagger
 - **日志框架**：Logback
@@ -46,9 +46,9 @@ DeepSeek API 测试项目是一个基于Spring Boot的Web应用，用于处理�
 2. 系统调用DeepSeek API进行摘要生成
 3. 返回摘要结果给用户
 
-## 高并发处理
+## 消息队列
 
-系统通过以下方式实现高并发处理：
+系统通过消息队列实现如下：
 
 1. **异步消息队列**：使用RabbitMQ实现请求的异步处理
 2. **生产者异步发送**：使用 `@Async`注解实现消息异步发送
